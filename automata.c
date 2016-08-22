@@ -1,8 +1,21 @@
 /*
- * nfa2dfa.c
+ * automata.c
  *
- *  Created on: 8 de ago de 2016
- *      Author: luan
+ * This implementation has as its purpose to receive a string from the default
+ * input and check wether it's a substring of a given text, or not.
+ *
+ * To do so, first we convert the string into a NFA (Non-deterministi finite au-
+ * tomata) for matter of simplicity.
+ *
+ * Then, we convert the NFA into a DFA (Deterministic Finite Automata), because
+ * of its deterministics properties and simple search algorithm.
+ *
+ * Last, we search the string as a substring of a given text, using the determi-
+ * nism of the new computational model.
+ *
+ * Created on: 8 de ago de 2016
+ * Last modified on: 21 de ago de 2016
+ * Author: Luan Sousa
  */
 
 #include <stdio.h>
@@ -10,20 +23,23 @@
 #include <string.h>
 
 #define STATES 50
-#define alphSize 8
-#define maxTrans 2
+#define FAILURE 0
+#define SUCCESS 1
+#define alphSize 95 // Size of the alphabet
+#define maxTrans 2  // Maximum transitions of the NFA
 
 struct alphabet {
 	int size;
 	char symbols[alphSize];
 } ascii;
 
-struct Dstate {
-	char name;
+struct DFAstate {
+    int isFinal;
+	char label;
 	char StateString[STATES + 1];
-	char trans[10];
-	int is_final;
-} Dstates[50];
+	char transitions[alphSize];
+    int transitionsI[alphSize];
+} DFAstates[STATES];
 
 struct transition {
     int notran;
@@ -31,60 +47,61 @@ struct transition {
 	int tostates[maxTrans];
 };
 
-struct state {
+struct NFAstate {
 	int label;
 	struct transition
            transitions[alphSize+1];
 };
 
-int stackA[100], stackB[100];
-int C[100];
-char temp[STATES+1];
-int Cptr = -1, Aptr = -1, Bptr = -1, nods = -1;
+int stackA[100], Aptr = -1;
+int stackB[100], Bptr = -1;
+int C[100],      Cptr = -1;
 
-int i, j, k, fin;
+char str[1000];
+char temp[STATES+1];
+
+int i, j, k, fin, nods = -1;
 
 int final;
 int start;
-char str[1000];
 int numberOfStates;
 int numberOfSymbols;
-struct state states[50];
-/*char symbols[alphSize] = { ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')',
+struct NFAstate states[50];
+char symbols[alphSize] = { ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')',
         '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7',
         '8', '9', ':', ';', '<', '=', '>', '?', '@', 'A', 'B', 'C', 'D',
         'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
         'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^',
         '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k',
         'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
-        'y', 'z', '{', '|', '}', '~' };*/
+        'y', 'z', '{', '|', '}', '~' };
 
-//char symbols[alphSize] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
-//		'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
-//        'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
-//		'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
-
+/*
+char symbols[alphSize] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+		'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
+        'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+		'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
+*
 char symbols[alphSize] = { 'l', 'u', 'a', 'n', ' ', 'c', 'p', 'k' };
-// char symbols[alphSize] = { 'l', ' ', 'a' };
+/*
+char symbols[alphSize] = { 'l', ' ', 'a' };
+*/
 
 
 /*---------- Stack Manipulation ----------*/
-void pushA(int z) { stackA[++Aptr] = z; }
-void pushB(int z) { stackB[++Bptr] = z; }
-
 int popA() { return stackA[Aptr--]; }
 int popB() { return stackB[Bptr--]; }
 
 int peekB() { return stackA[Bptr]; }
 int peekA() { return stackA[Aptr]; }
+
+void pushA(int z) { stackA[++Aptr] = z; }
+void pushB(int z) { stackB[++Bptr] = z; }
 /*----------------------------------------*/
 
-
-
 void sort() {
-    int i, j,  temp;
+    int i, j, temp;
     for (i = 0; i < Bptr; i++) {
-        printf("passou por aqui\n");
         for (j = 0; j < (Bptr - i); j++) {
             if (stackB[j] > stackB[j + 1]) {
                 temp = stackB[j];
@@ -99,8 +116,9 @@ void tostring() {
     int i = 0;
     sort();
 
-    for (i = 0; i <= Bptr; i++)
+    for (i = 0; i <= Bptr; i++) {
         temp[i] = stackB[i] + '0';
+    }
 
     temp[i] = '\0';
 }
@@ -109,7 +127,7 @@ void copy(int i) {
     char temp[STATES + 1] = " ";
     int k = 0;
     Bptr = -1;
-    strcpy(temp, Dstates[i].StateString);
+    strcpy(temp, DFAstates[i].StateString);
 
     while (temp[k] != '\0') {
         pushB(temp[k] - '0');
@@ -133,26 +151,16 @@ void move(int st, int j) {
     }
 }
 
-void lambda_closure(int state) {
+void lambda_closure(int NFAstate) {
     int chk;
     int ctr = 0;
-    int inState = state;
-    int currentState = state;
+    int inState = NFAstate;
+    int currentState = NFAstate;
 
     while (Aptr != -1) {
         currentState = popA();
         ctr = 0;
         inState = currentState;
-        // printf("currentState: %d\n", currentState);
-        // printf("notran: %d\n", states[currentState].transitions[76].notran);
-        // chk = seek(stackB, Bptr, inState);
-        // printf("chk: %d\n", chk);
-        // pushB(inState);
-        // printf("stackB: %d\n", peekB());
-        // inState = states[currentState].transitions[alphSize].tostates[ctr++];
-        // printf("inState: %d\n", inState);
-        // chk = seek(stackA, Aptr, inState);
-        // printf("chk: %d\nctr: %d\n\n", chk, ctr);
 
         while (ctr <= states[currentState].transitions[alphSize+1].notran) {
             chk = seek(stackB, Bptr, inState);
@@ -168,11 +176,7 @@ void lambda_closure(int state) {
 
 void readString() {
     printf("\nDigite sua busca: ");
-    fgets(str, STATES+1, stdin);
-    // scanf("%[^]s", str);
-
-
-    // printf("%d", strlen(str));
+    fgets(str, STATES, stdin);
 
     numberOfStates  = strlen(str);
     numberOfSymbols = alphSize;
@@ -180,10 +184,14 @@ void readString() {
     start = 0;
     final = numberOfStates - 1;
 
-    for (int i = 0; i < numberOfStates; i++)
+    for (int i = 0; i < numberOfStates; i++) {
         states[i].label = i;
-    for (int i = 0; i < numberOfSymbols; i++)
+    }
+
+    for (int i = 0; i < numberOfSymbols; i++) {
         ascii.symbols[i] = symbols[i];
+    }
+
     // Adiciona uma transição para o próprio estado com cada símbolo do
     // alfabeto. Válido somente para os estados inicial e final.
     for (int i = 0; i < numberOfStates; i++) {
@@ -193,6 +201,7 @@ void readString() {
         }
         states[i].transitions[alphSize+1].notran = 0;
     }
+
     for (int i = 0; i < numberOfStates; i++) {
         for (int j = 0; j < numberOfSymbols; j++) {
             int k = 0;
@@ -207,6 +216,7 @@ void readString() {
             }
         }
     }
+
     for (int i = 0; i < numberOfStates; i++) {
         for (int j = 0; j <= numberOfSymbols; j++) {
             int k = states[i].transitions[j].notran;
@@ -218,39 +228,19 @@ void readString() {
     }
 }
 
-void printNFA() {
-    for (int i = 0; i < numberOfStates; i++) {
-        for (int j = 0; j < numberOfSymbols; j++) {
-            // if (str[i] == symbols[j]) {
-            //     printf("(%d, %c) = %d | \t", i, ascii.symbols[j],
-            //         states[i].transitions[j].tostates[0]);
-            //     if (i == 0 && str[i] == symbols[j]) {
-            //         printf("(%d, %c) = %d | \t", i, ascii.symbols[j],
-            //             states[i].transitions[j].tostates[1]);
-            //     }
-                // printf("notran = %d\n", states[i].transitions[j].notran);
-                printf("%d, ", states[i].transitions[j].notran);
-            // }
-        }
-        printf("%d, ", states[i].transitions[alphSize+1].notran);
-        printf("\n");
-    }
-}
-
 void conversion() {
     i = 0;
     nods = 0;
     fin = 0;
-    pushA(start); // Push NFA's initial state into stackA
+    pushA(start); // Push NFA's initial NFAstate into stackA
 
-    lambda_closure(peekA()); // Perform lambda closure on NFA's initial state
+    lambda_closure(peekA()); // Perform lambda closure on NFA's initial NFAstate
     tostring();
-    Dstates[nods].name = 'A';
+    DFAstates[nods].label = 'A';
     nods++;
-    strcpy(Dstates[0].StateString, temp);
+    strcpy(DFAstates[0].StateString, temp);
 
     while (i < nods) {
-        printf("passei por aqui %d\n", i);
         for (j = 0; j < numberOfSymbols; j++) {
             fin = 0;
             copy(i);
@@ -261,8 +251,9 @@ void conversion() {
             tostring();
 
             for (k = 0; k < nods; k++) {
-               if ((strcmp(temp, Dstates[k].StateString) == 0)) {
-                    Dstates[i].trans[j] = Dstates[k].name;
+               if ((strcmp(temp, DFAstates[k].StateString) == 0)) {
+                    DFAstates[i].transitions[j] = DFAstates[k].label;
+                    DFAstates[i].transitionsI[j] = k;
                     break;
                 }
             }
@@ -272,13 +263,14 @@ void conversion() {
                 for (k = 0; k < 1; k++) {
                     fin = seek(stackB, Bptr, final);
                     if (fin == 1) {
-                        Dstates[nods - 1].is_final = 1;
+                        DFAstates[nods - 1].isFinal = 1;
                         break;
                     }
                 }
-                strcpy(Dstates[nods - 1].StateString, temp);
-                Dstates[nods - 1].name = 'A' + nods - 1;
-                Dstates[i].trans[j] = Dstates[nods - 1].name;
+                strcpy(DFAstates[nods - 1].StateString, temp);
+                DFAstates[nods - 1].label = 'A' + nods - 1;
+                DFAstates[i].transitions[j] = DFAstates[nods - 1].label;
+                DFAstates[i].transitionsI[j] = nods - 1;
             }
         }
 
@@ -286,8 +278,53 @@ void conversion() {
     }
 }
 
+int search () {
+    char txt[1000];
+    printf("Digite o texto: ");
+    fgets(txt, 1000, stdin);
+
+    int k = -1;
+    int N = strlen(txt);
+    int M = strlen(str);
+
+    for (i = 0, k = 0; i < N-1 && k < M-1; i++) {
+        /*for (j = 0; j < M-1; j++) {
+            if (txt[i] == str[j]) {
+                p = j;
+                break;
+            }
+        }*/
+        k = DFAstates[i].transitionsI[k];
+          //dfa[txt.charAt(i)][j];
+    }
+    if (DFAstates[k].isFinal == 1) {
+        return 1;
+    }
+
+    return 0;
+}
+
+void printNFA() {
+    for (int i = 0; i < numberOfStates; i++) {
+        for (int j = 0; j < numberOfSymbols; j++) {
+            if (str[i] == symbols[j]) {
+                printf("(%d, %c) = %d | \t", i, ascii.symbols[j],
+                    states[i].transitions[j].tostates[0]);
+                if (i == 0 && str[i] == symbols[j]) {
+                    printf("(%d, %c) = %d | \t", i, ascii.symbols[j],
+                        states[i].transitions[j].tostates[1]);
+                }
+                // printf("notran = %d\n", states[i].transitions[j].notran);
+                // printf("%d, ", states[i].transitions[j].notran);
+            }
+        }
+        // printf("%d, ", states[i].transitions[alphSize+1].notran);
+        printf("\n");
+    }
+}
+
 void printDFA() {
-    printf("\n       DFA Transition Table ");
+    printf("\n       DFA Transition Table      ");
     printf("\n---------------------------------");
     printf("\nStates\tString\t\tInputs\n\t");
 
@@ -296,13 +333,13 @@ void printDFA() {
     printf("\n---------------------------------");
 
     for (int i = 0; i < nods; i++) {
-        if (Dstates[i].is_final == 0) printf("\n%c",Dstates[i].name);
-        else printf("\n*%c",Dstates[i].name);
+        if (DFAstates[i].isFinal == 0) printf("\n%c",DFAstates[i].label);
+        else printf("\n*%c",DFAstates[i].label);
 
-        printf("\t%s",Dstates[i].StateString);
+        printf("\t%s",DFAstates[i].StateString);
 
         for (int j = 0; j < numberOfSymbols; j++) {
-            printf("\t%c", Dstates[i].trans[j]);
+            printf("\t%c", DFAstates[i].transitions[j]);
         }
     }
 
@@ -311,10 +348,12 @@ void printDFA() {
 
 int main() {
     readString();
-    // printNFA();
+    printNFA();
     conversion();
     printDFA();
-    return 0;
+    printf("\nA string buscada %sé uma substring do texto!\n\n",
+                            (search() == SUCCESS)? "" : "não ");
+   return 0;
 }
 
 
