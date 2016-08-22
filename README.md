@@ -11,5 +11,5 @@ ments the definition of non-deterministic finite automata.
 
 (b) Implement a string search using non-deterministic finite automata. Given a text and a string to be sought in the
     text, your implementation should build a deterministic finite automaton from the string and then convert it into
-    a deterministic finite automaton. Then you should check if the string occurs in the text by the deterministic fi-
+    a deterministic finite automaton. Then you should check if the string occurs in the text by the deterministic fi
     nite automata.
