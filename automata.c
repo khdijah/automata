@@ -14,7 +14,7 @@
  * nism of the new computational model.
  *
  * Created on: 8 de ago de 2016
- * Last modified on: 21 de ago de 2016
+ * Last modified on: 22 de ago de 2016
  * Author: Luan Sousa
  */
 
@@ -25,7 +25,7 @@
 #define STATES 50
 #define FAILURE 0
 #define SUCCESS 1
-#define alphSize 95 // Size of the alphabet
+#define alphSize 2 // Size of the alphabet
 #define maxTrans 2  // Maximum transitions of the NFA
 
 struct alphabet {
@@ -68,24 +68,20 @@ int numberOfStates;
 int numberOfSymbols;
 struct NFAstate states[50];
 char symbols[alphSize] = { ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')',
-        '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7',
-        '8', '9', ':', ';', '<', '=', '>', '?', '@', 'A', 'B', 'C', 'D',
-        'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
-        'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^',
-        '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k',
-        'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
-        'y', 'z', '{', '|', '}', '~' };
+       '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7',
+       '8', '9', ':', ';', '<', '=', '>', '?', '@', 'A', 'B', 'C', 'D',
+       'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
+       'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^',
+       '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k',
+       'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
+       'y', 'z', '{', '|', '}', '~' };
 
-/*
-char symbols[alphSize] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+/*char symbols[alphSize] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
 		'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
         'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
 		'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
-*
-char symbols[alphSize] = { 'l', 'u', 'a', 'n', ' ', 'c', 'p', 'k' };
-/*
-char symbols[alphSize] = { 'l', ' ', 'a' };
 */
+/*char symbols[alphSize] = { '0', '1'};*/
 
 
 /*---------- Stack Manipulation ----------*/
@@ -137,6 +133,7 @@ void copy(int i) {
 
 int seek(int arr[], int ptr, int s) {
     int i;
+
     for (i = 0; i <= ptr; i++) {
         if (s == arr[i]) return 1;
     }
@@ -146,6 +143,7 @@ int seek(int arr[], int ptr, int s) {
 
 void move(int st, int j) {
     int ctr = 0;
+
     while (ctr < states[st].transitions[j].notran) {
         pushA(states[st].transitions[j].tostates[ctr++]);
     }
@@ -241,7 +239,7 @@ void conversion() {
     strcpy(DFAstates[0].StateString, temp);
 
     while (i < nods) {
-        for (j = 0; j < numberOfSymbols; j++) {
+		for (j = 0; j < numberOfSymbols; j++) {
             fin = 0;
             copy(i);
 
@@ -250,12 +248,12 @@ void conversion() {
 
             tostring();
 
-            for (k = 0; k < nods; k++) {
+			for (k = 0; k < nods; k++) {
                if ((strcmp(temp, DFAstates[k].StateString) == 0)) {
-                    DFAstates[i].transitions[j] = DFAstates[k].label;
-                    DFAstates[i].transitionsI[j] = k;
-                    break;
-                }
+				   DFAstates[i].transitions[j] = DFAstates[k].label;
+				   DFAstates[i].transitionsI[j] = k;
+				   break;
+			   }
             }
 
             if (k == nods) {
@@ -278,28 +276,30 @@ void conversion() {
     }
 }
 
-int search () {
-    char txt[1000];
-    printf("Digite o texto: ");
-    fgets(txt, 1000, stdin);
-
-    int k = -1;
-    int N = strlen(txt);
-    int M = strlen(str);
-
-    for (i = 0, k = 0; i < N-1 && k < M-1; i++) {
-        /*for (j = 0; j < M-1; j++) {
-            if (txt[i] == str[j]) {
-                p = j;
-                break;
-            }
-        }*/
-        k = DFAstates[i].transitionsI[k];
-          //dfa[txt.charAt(i)][j];
-    }
-    if (DFAstates[k].isFinal == 1) {
-        return 1;
-    }
+int search() {
+	char txt[1000];
+	printf("Digite o texto: ");
+	fgets(txt, 1000, stdin);
+	
+	int i, j, k, p = -1;
+	int N = strlen(txt);
+	int M = strlen(str);
+	
+	for (i = 0, k = 0; i < N-1 && k < M-1; i++) {
+		for (j = 0; j < M-1; j++) {
+			if (txt[i] == str[j]) {
+				p = j;
+				break;
+			}
+		}
+		
+		if (p != -1) {
+			k = DFAstates[i].transitionsI[k];
+		}
+	}
+	if (DFAstates[k].isFinal == 1) {
+		return 1;
+	}
 
     return 0;
 }
@@ -307,7 +307,7 @@ int search () {
 void printNFA() {
     for (int i = 0; i < numberOfStates; i++) {
         for (int j = 0; j < numberOfSymbols; j++) {
-            if (str[i] == symbols[j]) {
+            // if (str[i] == symbols[j]) {
                 printf("(%d, %c) = %d | \t", i, ascii.symbols[j],
                     states[i].transitions[j].tostates[0]);
                 if (i == 0 && str[i] == symbols[j]) {
@@ -316,7 +316,7 @@ void printNFA() {
                 }
                 // printf("notran = %d\n", states[i].transitions[j].notran);
                 // printf("%d, ", states[i].transitions[j].notran);
-            }
+           // }
         }
         // printf("%d, ", states[i].transitions[alphSize+1].notran);
         printf("\n");
@@ -339,7 +339,7 @@ void printDFA() {
         printf("\t%s",DFAstates[i].StateString);
 
         for (int j = 0; j < numberOfSymbols; j++) {
-            printf("\t%c", DFAstates[i].transitions[j]);
+            printf("\t%c, (%d)", DFAstates[i].transitions[j], DFAstates[i].transitionsI[j]);
         }
     }
 
@@ -353,7 +353,8 @@ int main() {
     printDFA();
     printf("\nA string buscada %sé uma substring do texto!\n\n",
                             (search() == SUCCESS)? "" : "não ");
+
    return 0;
 }
 
-
+//Fim
